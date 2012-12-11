@@ -1,4 +1,4 @@
 droploc
 =======
 
-Returns DropBox location on Windows
+On Windows, prints Dropbox folder location to stdout. Useful for batch files.
