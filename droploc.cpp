@@ -2,7 +2,7 @@
 // Roland Rabien
 // roland@rabien.com
 
-#ifdef __WIN32
+#ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef __WIN32
+#ifdef _WIN32
 #include <Windows.h>
 #include <ShlObj.h>
 #endif
