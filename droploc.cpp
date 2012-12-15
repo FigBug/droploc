@@ -2,12 +2,26 @@
 // Roland Rabien
 // roland@rabien.com
 
+#ifdef __WIN32
 #define _CRT_SECURE_NO_WARNINGS
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
+#ifdef __WIN32
 #include <Windows.h>
 #include <ShlObj.h>
+#endif
+
+#ifdef __APPLE__
+#define MAX_PATH 1024
+#include <wordexp.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#endif
 
 #define TABLELEN        64
 #define BUFFFERLEN      128
@@ -81,14 +95,34 @@ int base64Decode(char* input, char* output, int oplen)
    return rc;
 }
 
+int getHostDBPath(char* path)
+{
+#ifdef _WIN32
+    if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, 0, path))) 
+	{
+	    strcat(path, "\\Dropbox\\host.db");
+		return 1;
+	}
+	return 0;
+#endif
+#ifdef __APPLE__
+	strcpy(path, "~/.dropbox/host.db");
+	
+	wordexp_t exp_result;
+	wordexp(path, &exp_result, 0);
+	strcpy(path, exp_result.we_wordv[0]);
+	wordfree(&exp_result); 
+	
+	return 1;
+#endif
+}
+
 int findDropboxFolder(char* dropboxPath, int sz)
 {
     char path[MAX_PATH];
 
-    if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, 0, path))) 
+	if (getHostDBPath(path))
     {
-        strcat(path, "\\Dropbox\\host.db");
-
         FILE* fp = fopen(path, "rt");
         if (fp)
         {
@@ -100,19 +134,26 @@ int findDropboxFolder(char* dropboxPath, int sz)
             
             fclose(fp);
 
+#ifdef _WIN32
             DWORD attr = GetFileAttributes(dropboxPath);
 
             if (attr != INVALID_FILE_ATTRIBUTES && (attr & FILE_ATTRIBUTE_DIRECTORY))
-                return 0;
+                return 1;
+#endif
+#ifdef __APPLE__
+			struct stat dirStat;
+			if ((stat(dropboxPath, &dirStat) == 0) && S_ISDIR(dirStat.st_mode))
+				return 1;
+#endif
         }
     }
-    return -1;
+    return 0;
 }
 
 int main(int argc, char* argv[])
 {
     char path[MAX_PATH];
-    if (findDropboxFolder(path, sizeof(path)) == 0)
+    if (findDropboxFolder(path, sizeof(path)))
     {
         printf("%s", path);
     	return EXIT_SUCCESS;
